@@ -38,7 +38,7 @@ bool musicCycleDone;
 
 void setup() {
   PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[LED1_PIN], PIN_FUNC_GPIO);
-  *((volatile uint32_t*) GPIO_ENABLE_REG) |= ( 1 << GPIO_PIN);
+  *((volatile uint32_t*) GPIO_ENABLE_REG) |= ( 1 << LED1_PIN);
   lcd.backlight();
   lcd.init();
   lcd.clear();
@@ -85,7 +85,7 @@ void loop() {
   }
   else {
     TaskList[bestIndex].fptr(); // call the task
-    TaskList[bestIndex].state = STATE_COMPLETE;
+    TaskList[bestIndex].state = STATE_DONE;
     Serial.printf("%s : %d\n", TaskList[bestIndex].name, TaskList[bestIndex].priority);
   }
 }
@@ -127,8 +127,14 @@ void blinkEight () {
 void printToTen() {
 
   for (int i = 0; i < 10; i++) {
+    if (i == 5) {
+      lcd.setCursor(0,1); // print 6-10 on second row
+    }
     lcd.print((i+1));
+    lcd.print(" ");
+    delay(300);
   }
+  delay(500);
   lcd.clear(); // clear after all num prints.
   return;
 }
@@ -193,7 +199,5 @@ void buzzerSounds(int currentBuzz) {
         break;
     }
 }
-
-
 
 
