@@ -1,67 +1,71 @@
+/*
+Filename: part1lab3.ino
+Authors: Cliff Pham and Josh Corrigan
+Date: 11/17/2026
+Description: Reads text typed into the Serial Monitor and displays it on external
+  LCD screen through I2C.
+*/
+
+// ================= Includes =================
 #include <Wire.h>
-
-
-// Ensure that the LiquidCrystal I2C library by Frank de Brabander is installed in your Arduino IDE Library Manager
 #include <LiquidCrystal_I2C.h>
 
+// ================= Global Variables =================
 bool finishedPrint;
-
-
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Initialize the LCD
+
+
+// ================= Function Prototypes =================
+
+/*
+Name: printLCD
+Description: Sends one 4-bit nibble of character data to the LCD over I2C.
+*/
+void printLCD(uint8_t data);
+
+/*
+Name: resetScreen
+Description: Clears the LCD and returns the cursor to the first position
+  using raw I2C writes.
+*/
+void resetScreen();
+
+// ================= Setup and Loop =================
+
 void setup() {
   finishedPrint = false;
   Serial.begin(115200);
   Wire.begin();
-  lcd.init();
-
-  
+  lcd.init();  
   resetScreen();
-    
-
   delay(2);
 }
 
-// maybe have some state variable so each new time entered message, clear old message. 
-// How to tell when finished printing all of message?
-
 void loop() {
-  // ====================> TODO:
-  // Write code that takes Serial input and displays it to the LCD. Do NOT use any 
-  // functions from the LiquidCrystal I2C library here.
-
   if (Serial.available()) {
 
-  if (finishedPrint) {
-    resetScreen();
-    delay(2);
-    finishedPrint = false;
-  }
-
-    // read in the text that is entered
+    if (finishedPrint) {
+      resetScreen();
+      delay(2);
+      finishedPrint = false;
+    }
+  
     char incoming = Serial.read();
 
     if (incoming != '\n' && incoming != '\r') {
-      // send to screen
 
-      // all in the position for data
+      // split incoming data to high and low nibble.
       uint8_t highNibble = (incoming & 0xF0); 
       uint8_t lowNibble = ((incoming << 4) & 0xF0);
-
       printLCD(highNibble);
       printLCD(lowNibble);
-
-      
-
-
     }
     else {
       finishedPrint = true;
     }
-
-
   }
-
 }
+// ================= Function Implementations =================
 
 void printLCD(uint8_t data) {
   Wire.beginTransmission(0x27);
@@ -89,4 +93,3 @@ void resetScreen() {
 
   Wire.endTransmission();
 }
-

@@ -1,18 +1,25 @@
+/*
+Filename: part2lab3.ino
+Authors: Cliff Pham and Josh Corrigan
+Date: 11/17/2026
+Description: A priority-based task scheduler implementation. Four tasks
+  (LED blinker, LCD counter, music player, alphabet printer) are stored in a
+  task list of Task Control Blocks (TCBs). Each pass of loop() runs the
+  incomplete task with the highest priority (lowest number) and marks it done.
+  When every task has finished, all tasks are reset and their priorities are
+  rotated by one so a different task goes first on the next cycle.
+*/
 
-
-// Includes
+// ================= Includes =================
 #include "driver/gpio.h"
 #include "soc/io_mux_reg.h"
 #include "soc/gpio_reg.h"
 #include "soc/gpio_periph.h"
 #include <LiquidCrystal_I2C.h>
-#include <Wire.h>
 
-
+// ================= Macros =================
 #define STATE_INCOMPLETE 0
 #define STATE_DONE 1
-
-
 #define N_MAX_TASKS 4
 #define LED1_PIN 4
 #define LED2_PIN 47
@@ -21,8 +28,9 @@
 #define BUZZER_RES 12
 #define LED_FREQ 10000
 #define LED_RES 10
-#define TIMER_THRESHOLD 1000 // one second in millis.
+#define TIMER_THRESHOLD 1000 
 
+// Task Control Block (TCB) with relevant information the scheduler needs for each task
 typedef struct {
   void (*fptr) (void);
   unsigned short int state;
@@ -30,11 +38,66 @@ typedef struct {
   const char* name;
 }TCBstruct;
 
+// ================= Global Variables =================
 TCBstruct TaskList[N_MAX_TASKS];
 int currentBuzz;
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Initialize the LCD
 uint32_t lastTick;
 bool musicCycleDone;
+
+// ================= Function Prototypes =================
+
+/*
+Name: resetTasks
+Description: Marks every task as incomplete and
+  rotates each task's priority by one so the task order
+  changes every cycle.
+*/
+void resetTasks();
+
+
+/*
+Name: getHighestPriority
+Description: Searches TaskList for the incomplete task with the highest priority (lowest value)
+*/
+int getHighestPriority();
+
+/*
+Name: blinkEight
+Description: Blinks LED1 eight times in 1 second duration.
+*/
+void blinkEight();
+
+/*
+Name: printToTen
+Description: Counts from 1 to 10 on the LCD, with 1-5 on the first row and
+  6-10 on the second row, then clears the screen.
+*/
+void printToTen();
+
+/*
+Name: playNotes
+Description: Plays ten notes on the buzzer, one second each. LED2's brightness is scaled to the
+  current buzzer frequency so it gets brighter as the pitch rises. The buzzer
+  and LED2 are turned off when finished.
+*/
+void playNotes();
+
+/*
+Name: printLetters
+Description: Prints the lowercase letters a through z to the Serial Monitor
+*/
+void printLetters();
+
+/*
+Name : buzzerSounds
+Description: This helper function will switch through
+  three different sound at three different frequencies
+  just as according to the lab handout.
+*/
+void buzzerSounds(int currentBuzz);
+
+// ================= Setup and Loop =================
 
 void setup() {
   PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[LED1_PIN], PIN_FUNC_GPIO);
@@ -72,33 +135,31 @@ void setup() {
   TaskList[3].state = STATE_INCOMPLETE;
   TaskList[3].priority = 4;
   TaskList[3].name = "Alphabet Printer";
-
-
-
 }
 
 void loop() {
   int bestIndex = getHighestPriority(); // if bestIndex is -1, that means no more ready tasks
   if (bestIndex == -1) {
-    // reset all tasks to incomplete and incr by mod 4 + 1
     resetTasks();
   }
   else {
-    TaskList[bestIndex].fptr(); // call the task
+    TaskList[bestIndex].fptr(); 
     TaskList[bestIndex].state = STATE_DONE;
     Serial.printf("%s : %d\n", TaskList[bestIndex].name, TaskList[bestIndex].priority);
   }
 }
 
+// ================= Function Implementations =================
+
 void resetTasks() {
   for (int i = 0; i < N_MAX_TASKS; i++) {
     TaskList[i].state = STATE_INCOMPLETE;
-    TaskList[i].priority = (TaskList[i].priority % 4) + 1;
+    TaskList[i].priority = (TaskList[i].priority % 4) + 1; // wrap around
   }
   return;
 }
 
-int getHighestPriority() { // return index of task in TaskList of TCB with valid (incomplete) task and highest priority
+int getHighestPriority() {
   int bestIndex = -1;
   int bestPriority = 5;
   for (int i = 0; i < N_MAX_TASKS; i++) {
@@ -112,7 +173,6 @@ int getHighestPriority() { // return index of task in TaskList of TCB with valid
   return bestIndex;
 }
 
-
 void blinkEight () {
   for (int i = 0; i < 8; i ++) {
     *((volatile uint32_t*)GPIO_OUT_REG) |= (1 << LED1_PIN);
@@ -123,9 +183,7 @@ void blinkEight () {
   return;
 }
 
-// count from 1 to 10 on LCD
 void printToTen() {
-
   for (int i = 0; i < 10; i++) {
     if (i == 5) {
       lcd.setCursor(0,1); // print 6-10 on second row
@@ -135,7 +193,7 @@ void printToTen() {
     delay(300);
   }
   delay(500);
-  lcd.clear(); // clear after all num prints.
+  lcd.clear(); 
   return;
 }
 
@@ -159,12 +217,7 @@ void printLetters() {
   return;
 }
 
-/*
-Name : buzzerSounds
-Description: This helper function will switch through
-  three different sound at three different frequencies
-  just as according to the lab handout.
-*/
+
 void buzzerSounds(int currentBuzz) {
   switch(currentBuzz) {
       case 0:
@@ -199,5 +252,3 @@ void buzzerSounds(int currentBuzz) {
         break;
     }
 }
-
-
